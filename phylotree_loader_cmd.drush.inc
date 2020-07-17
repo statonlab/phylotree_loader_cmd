@@ -27,9 +27,9 @@ function phylotree_make_download_table($name, $path)
 		<tr class="no-border">
 		<td class="text-muted download-td"><i class="fa fa-file-text-o"></i></td>
 		<th>
-			<a class="text-sm text-muted font-normal" href="$path">$name</a>
+			<a href="$path" target="_blank" download="$name.fa">$name</a>
 			<div>
-				<a class="text-sm text-muted font-normal" href="$path">Multiple sequence alignments</a>
+				<a class="text-sm text-muted font-normal" href="$path" target="_blank" download="$name.fa">Multiple sequence alignments</a>
 			</div>
 		</th>
 		<td class="text-right"><a href="$path" class="btn btn-primary"><i class="fa fa-download"></i></a></td>
@@ -67,7 +67,7 @@ function drush_phylotree_loader_cmd_phylotree($dir, $analysis_id)
         echo "Creating $name\n";
 
         $options = [
-            'name' => $name.date('M jS, Y'),
+            'name' => $name.' '.date('M jS, Y'),
             'description' => phylotree_make_download_table($name, $msa),
             'analysis_id' => $analysis_id,
             'leaf_type' => 'mRNA',
