@@ -39,6 +39,36 @@ function phylotree_make_download_table($name, $path)
 html;
 }
 
+function phylotree_make_cvterm_table($cvterms)
+{
+  $html = <<<html
+<table>
+  <tbody>
+  <tr>
+  <th>Controlled Vocabulary</th>
+  <th>Term</th>
+  <th>Description</th>
+  </tr>
+html;
+
+  foreach ($cvterms as $cvterm) {
+    $html .= <<<html
+<tr>
+<td>{$cvterm->c_name}</td>
+<td>{$cvterm->name}</td>
+<td>{$cvterm->definition}</td>
+</tr>
+html;
+  }
+
+  $html .= <<<html
+</tbody>
+</table>
+html;
+
+  return $html;
+}
+
 function drush_phylotree_loader_cmd_phylotree($dir, $analysis_id)
 {
     $analysis = chado_query("select * from {analysis} where analysis_id=:id",
@@ -66,16 +96,18 @@ function drush_phylotree_loader_cmd_phylotree($dir, $analysis_id)
 
         echo "Creating $name\n";
 
+        $unique_name = $name.' '.date('M jS, Y');
+
         $options = [
-            'name' => $name.' '.date('M jS, Y'),
-            'description' => phylotree_make_download_table($name, $msa),
+            'name' => $unique_name,
+            'description' => '', // phylotree_make_download_table($name, $msa),
             'analysis_id' => $analysis_id,
             'leaf_type' => 'mRNA',
             'tree_file' => $tree,
             'format' => 'newick',
             'dbxref' => '',
             'match' => '',
-            'name_re' => '',
+            'name_re' => '(.*)',
             'load_now' => true,
         ];
 
@@ -93,6 +125,29 @@ function drush_phylotree_loader_cmd_phylotree($dir, $analysis_id)
             drush_print('ERROR: '.$error);
 
             drupal_set_message($error, 'error');
+        }
+
+        $query = chado_db_select('phylotree', 'pt');
+        $query->distinct();
+        $query->fields('cv', ['name', 'definition']);
+        $query->fields('c', ['name']);
+        $query->join('phylonode', 'pn', 'pn.phylotree_id = pt.phylotree_id');
+        $query->join('feature_cvterm', 'fc', 'fc.feature_id = pn.feature_id');
+        $query->join('cvterm', 'cv', 'fc.cvterm_id = cv.cvterm_id');
+        $query->join('cv', 'c', 'c.cv_id = cv.cv_id');
+        $query->condition('pt.name', $unique_name, '=');
+
+        $results = $query->execute()->fetchAll();
+
+        $match = ['name' => $unique_name];
+        $values = ['comment' => phylotree_make_cvterm_table($results)];
+
+        $status = chado_update_record('phylotree', $match, $values);
+
+        if (!$status) {
+          drupal_set_message(t('Unable to add cvterm table to phylotree.', 'warning'));
+          tripal_report_error('tripal_analysis', TRIPAL_ERROR, 'Cvterm table: Unable to create cvterm table where values: %values',
+              ['%values' => print_r($values, TRUE)]);
         }
     }
 
