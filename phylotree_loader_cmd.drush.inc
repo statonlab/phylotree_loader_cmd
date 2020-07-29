@@ -41,6 +41,10 @@ html;
 
 function phylotree_make_cvterm_table($cvterms)
 {
+    if (empty($cvterms)) {
+        return '';
+    }
+
     $html = <<<html
 <table>
   <tbody>
@@ -140,7 +144,7 @@ function drush_phylotree_loader_cmd_phylotree($dir, $analysis_id)
         $results = $query->execute()->fetchAll();
 
         $match = ['name' => $unique_name];
-        $values = ['comment' => phylotree_make_cvterm_table($results)];
+        $values = ['comment' => phylotree_make_download_table($name, $msa) . phylotree_make_cvterm_table($results)];
 
         $status = chado_update_record('phylotree', $match, $values);
 
